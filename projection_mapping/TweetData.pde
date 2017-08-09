@@ -1,6 +1,4 @@
 class TweetData {
-  // tweet ID
-  String tweet_id;
   // tweet text include hashtag
   String text;
 
@@ -12,19 +10,13 @@ class TweetData {
   // user icon
   PImage icon;
 
-  @Deprecated
-    String date;
-
-  TweetData(JSONObject json) {
-    JSONObject user  = json.getJSONObject("user");
-    this.tweet_id    = json.getString("id_str");
-    this.text        = json.getString("text");
-    this.user_name   = user.getString("name");
-    this.screen_name = user.getString("screen_name");
-    this.icon        = loadImage(user.getString("profile_image_url", "png"));
-    this.date = json.getString("created_at");
+  TweetData(Status status) {
+    User user        = status.getUser();
     
-    id_list.append(this.tweet_id);
+    this.text        = status.getText();
+    this.user_name   = user.getName();
+    this.screen_name = user.getScreenName();
+    this.icon        = loadImage(user.getProfileImageURLHttps(), "png");
   }
 
   void draw() {
@@ -32,21 +24,7 @@ class TweetData {
   }
 
   @Override
-    boolean equals(Object obj) {
-    if (!(obj instanceof TweetData)) return false;
-    return this.tweet_id == ((TweetData)obj).tweet_id;
-  }
-
-  @Override
     public String toString() {
-    return this.tweet_id + "\n"
-      + this.user_name + "(@" + this.screen_name + ")\n"
-      + this.text + "\n"
-      + this.date;
-  }
-
-  @Override
-    int hashCode() {
-    return this.tweet_id.hashCode();
+    return this.user_name + "(@" + this.screen_name + ")\n" + this.text;
   }
 }
