@@ -1,7 +1,8 @@
 class FilterListener implements StatusListener {
   @Override
     public void onStatus(Status status) {
-    timeline.add(status);
+    //TimeLine$TweetImage.add(Status status) is invalid.
+    //timeline.add(status);
   }
 
   @Override
