@@ -1,12 +1,16 @@
 class Timeline {  
   LinkedList<PImage> tweet_list;
   PImage timeline_image;
+  PImage tweets_image;
   String searchStr;
 
   PGraphics buffer;
 
   int timelineWidth  = int(height*.5625);
   int timelineHeight = height;
+
+  private float top_marginY    = 0;
+  private int   new_tweet_tint = 0;
 
   Pattern highlight;
 
@@ -75,98 +79,80 @@ class Timeline {
     buffer.rect(0, timelineHeight-menuHeight-1, timelineWidth, menuHeight);
     buffer.image(menu, 0, timelineHeight-menuHeight, timelineWidth, menuHeight);
 
-    buffer.endDraw();
     this.timeline_image = buffer.get();
 
+    buffer.background(EXTRA_LIGHT_GRAY);
+    this.tweets_image = buffer.get(0, 0, timelineWidth, timelineHeight-95);
 
+    buffer.endDraw();
 
-    /* Streaming API setup
-     
-     FilterListener listener = new FilterListener();
-     
-     // build Configuration and TwitterStream by app keys.
-     Configuration configuration = new ConfigurationBuilder().setOAuthConsumerKey(CONSUMER_KEY)
-     .setOAuthConsumerSecret(CONSUMER_SECRET)
-     .setOAuthAccessToken(ACCESS_TOKEN)
-     .setOAuthAccessTokenSecret(ACCESS_SECRET)
-     .build();
-     TwitterStream twitterStream = new TwitterStreamFactory(configuration).getInstance();
-     twitterStream.addListener(listener);
-     
-     // use POST statuses/filter in Streaming APIs
-     FilterQuery filter = new FilterQuery();
-     filter.track(_searchStr);
-     twitterStream.filter(filter);
-     
-     */
+    // Streaming API setup
+    FilterListener listener = new FilterListener();
+    // build Configuration and TwitterStream by app keys.
+    Configuration configuration = new ConfigurationBuilder().setOAuthConsumerKey(CONSUMER_KEY)
+      .setOAuthConsumerSecret(CONSUMER_SECRET)
+      .setOAuthAccessToken(ACCESS_TOKEN)
+      .setOAuthAccessTokenSecret(ACCESS_SECRET)
+      .build();
+    TwitterStream twitterStream = new TwitterStreamFactory(configuration).getInstance();
+    twitterStream.addListener(listener);
+    // use POST statuses/filter in Streaming APIs
+    FilterQuery filter = new FilterQuery();
+    filter.track(_searchStr);
+    twitterStream.filter(filter);
   }
 
-  /* TimeLine$TweetImage(Status status) is invalid.
-   void add(Status status) {
-   this.tweet_list.add((new TweetImage(status)).img);
-   }
-   */
-
-  @Deprecated
-    void add(String _name, String _screen_name, String _text, String _icon_url) {
-    this.tweet_list.add(
-      (new TweetImage(_name, _screen_name, _text, _icon_url)).img
-      );
+  void add(Status status) {
+    this.tweet_list.add((new TweetImage(status)).img);
   }
+
+  //@Deprecated
+  //  void add(String _name, String _screen_name, String _text, String _icon_url) {
+  //  this.tweet_list.add(
+  //    (new TweetImage(_name, _screen_name, _text, _icon_url)).img
+  //    );
+  //}
+
 
   void draw() {
     fill(EXTRA_LIGHT_GRAY);
     stroke(EXTRA_LIGHT_GRAY);
     rect(0, 0, timelineWidth, timelineHeight);
-    image(this.tweet_list.get(0), 0, 95);
+
+    image(this.tweets_image, 0, 95 + this.top_marginY);
+    
+    if (this.tweet_list.size() != 0) {
+      if (this.top_marginY >= this.tweet_list.get(0).height) {
+        tint(255, new_tweet_tint);
+        image(this.tweet_list.get(0), 0, 95);
+        tint(255, 255);
+        if (this.new_tweet_tint > 255) {
+          this.top_marginY = 0;
+          this.tweet_list.remove(0);
+          this.new_tweet_tint = 0;
+          this.tweets_image = get(0, 95, timelineWidth, timelineHeight-95);
+        } else this.new_tweet_tint += 15;
+      } else this.top_marginY += 8;
+    }
+
+
     image(this.timeline_image, 0, 0);
+    
     textFont(BOLD, 18);
     fill(BLACK);
-    text(hour()+":"+minute(), timelineWidth/2, 15);
+    text(hour()+":"+nf(minute(), 2), timelineWidth/2, 15);
   }
 
-  class TweetImage {
+  // rewrite this class to method that return PImage
+  @Deprecated
+    class TweetImage {
     PImage img;
 
-    //TweetImage(Status status) {
-    //  User   user = status.getUser();
-    //  String text = status.getText();
-    //  textFont(BOLD);
-    //  int lineNum = 1;
-    //  float lineWidth = 0;
-    //  for (int i = 0; i < text.length(); i++) {
-    //    float _w = textWidth(text.charAt(i));
-    //    if (lineWidth + _w > timelineWidth) {
-    //      lineNum++;
-    //      lineWidth = _w;
-    //    } else {
-    //      lineWidth += _w;
-    //    }
-    //  }      
-    //  buffer.beginDraw();
-    //  buffer.stroke(EXTRA_LIGHT_GRAY);
-    //  buffer.fill(WHITE);
-    //  buffer.rect(0, 0, buffer.width, buffer.height);
-    //  PImage icon = loadImage(user.getProfileImageURLHttps(), "png");
-    //  icon.mask(mask);
-    //  buffer.image(icon, 15, 15, 60, 60);
-    //  buffer.fill(BLACK);
-    //  buffer.textFont(BOLD);
-    //  buffer.text(user.getName(), 120, 15);
-
-    //  buffer.text(text, 30, 130);
-
-    //  buffer.fill(DARK_GRAY);
-    //  buffer.textFont(REGULAR);
-    //  buffer.text(user.getScreenName(), 120, 65);
-
-    //  buffer.endShape();
-    //  this.img = buffer.get(0, 0, timelineWidth, max(int(50+lineNum*g.textLeading), 100));
-    //}
-
-    @Deprecated
-      TweetImage(String _name, String _screen_name, String _text, String _icon_url) {
-      String text = _text;
+    TweetImage(Status status) {
+      User   user        = status.getUser();
+      String text        = status.getText();
+      String name        = user.getName();
+      String screen_name = user.getScreenName();
       int tweetHeight;
       textFont(BOLD, 30);
 
@@ -179,8 +165,6 @@ class Timeline {
       buffer.textAlign(LEFT, BOTTOM);
       buffer.fill(BLACK);
       buffer.textFont(BOLD, 22);
-      String name        = _name;
-      String screen_name = _screen_name;
       if (textWidth(name) > timelineWidth - 110) {
         screen_name = "";
         float len = textWidth("…") + 110;
@@ -209,23 +193,21 @@ class Timeline {
       buffer.textFont(REGULAR, 22);
       buffer.text(screen_name, 95+nameWidth, 40);
 
-
-
-
       buffer.textAlign(LEFT, TOP);
       buffer.fill(BLACK);
       buffer.textFont(REGULAR, 22);
-
       int lineNum = 0;
       float textLeading = buffer.textLeading;
       float lineWidth = 0;
-
       Matcher matcher = highlight.matcher(text);
-      matcher.find();
-      int highlight_start = matcher.start();
-      int highlight_end   = matcher.end();
+      int highlight_start = -1;
+      int highlight_end   = -1;
       int bold_start      = text.indexOf(searchStr);
       int bold_end        = text.indexOf(searchStr) + searchStr.length();
+      if (matcher.find()) {
+        highlight_start = matcher.start();
+        highlight_end   = matcher.end();
+      }
       for (int i = 0; i < text.length(); i++) {
         if (i == highlight_start) buffer.fill(BLUE);
         else if (i == highlight_end) {
@@ -238,14 +220,17 @@ class Timeline {
             highlight_end   = -1;
           }
         }
-
         if (i == bold_start) buffer.textFont(BOLD, 20);
         else if (i == bold_end) {
           buffer.textFont(REGULAR, 22);
           bold_start = text.indexOf(searchStr, bold_end);
           bold_end   = (bold_start == -1 ? -1 : bold_start+searchStr.length());
         }
-
+        if (text.charAt(i) == '\n') {
+          lineNum++;
+          lineWidth = 0;
+          continue;
+        }
         float _w = buffer.textWidth(text.charAt(i));
         if (lineWidth + _w > timelineWidth-110) {
           lineNum++;
@@ -257,7 +242,6 @@ class Timeline {
 
       tweetHeight = max(int(80 + (lineNum+1) * textLeading), 100);
 
-
       buffer.stroke(LIGHT_GRAY);
       buffer.noFill();
       buffer.beginShape();
@@ -266,7 +250,7 @@ class Timeline {
       buffer.vertex(timelineWidth-9, 24);
       buffer.endShape();
 
-      PImage icon = loadImage(_icon_url, "png");
+      PImage icon = loadImage(user.getProfileImageURLHttps(), "png");
       icon.mask(MASK);
       buffer.image(icon, 15, 15, 60, 60);
       buffer.image(TOOL, 0, tweetHeight-TOOL.height-3);
@@ -274,10 +258,122 @@ class Timeline {
       buffer.endDraw();
       this.img = buffer.get(0, 0, timelineWidth, tweetHeight);
     }
+
+    // only use for test
+    //@Deprecated
+    //  TweetImage(String _name, String _screen_name, String _text, String _icon_url) {
+    //  String text = _text;
+    //  int tweetHeight;
+    //  textFont(BOLD, 30);
+
+    //  buffer.beginDraw();
+
+    //  buffer.stroke(EXTRA_LIGHT_GRAY);
+    //  buffer.fill(WHITE);
+    //  buffer.rect(0, 0, buffer.width, buffer.height);
+
+    //  buffer.textAlign(LEFT, BOTTOM);
+    //  buffer.fill(BLACK);
+    //  buffer.textFont(BOLD, 22);
+    //  String name        = _name;
+    //  String screen_name = _screen_name;
+    //  if (textWidth(name) > timelineWidth - 110) {
+    //    screen_name = "";
+    //    float len = textWidth("…") + 110;
+    //    for (int i = 0; i < name.length(); i++) {
+    //      len += textWidth(name.charAt(i));
+    //      if (len > timelineWidth) {
+    //        name = name.substring(0, i) + "…";
+    //        break;
+    //      }
+    //    }
+    //  } else {
+    //    if (textWidth(name) + textWidth(screen_name) > timelineWidth - 110) {
+    //      float len = textWidth(name) + textWidth("…") + 110;
+    //      for (int i = 0; i < screen_name.length(); i++) {
+    //        len += textWidth(screen_name.charAt(i));
+    //        if (len > timelineWidth) {
+    //          screen_name = screen_name.substring(0, i) + "…";
+    //          break;
+    //        }
+    //      }
+    //    }
+    //  }
+    //  buffer.text(name, 85, 40);
+    //  float nameWidth = textWidth(name);
+    //  buffer.fill(DARK_GRAY);
+    //  buffer.textFont(REGULAR, 22);
+    //  buffer.text(screen_name, 95+nameWidth, 40);
+
+
+
+
+    //  buffer.textAlign(LEFT, TOP);
+    //  buffer.fill(BLACK);
+    //  buffer.textFont(REGULAR, 22);
+
+    //  int lineNum = 0;
+    //  float textLeading = buffer.textLeading;
+    //  float lineWidth = 0;
+
+    //  Matcher matcher = highlight.matcher(text);
+    //  matcher.find();
+    //  int highlight_start = matcher.start();
+    //  int highlight_end   = matcher.end();
+    //  int bold_start      = text.indexOf(searchStr);
+    //  int bold_end        = text.indexOf(searchStr) + searchStr.length();
+    //  for (int i = 0; i < text.length(); i++) {
+    //    if (i == highlight_start) buffer.fill(BLUE);
+    //    else if (i == highlight_end) {
+    //      buffer.fill(BLACK);
+    //      if (matcher.find()) {
+    //        highlight_start = matcher.start();
+    //        highlight_end   = matcher.end();
+    //      } else {
+    //        highlight_start = -1;
+    //        highlight_end   = -1;
+    //      }
+    //    }
+
+    //    if (i == bold_start) buffer.textFont(BOLD, 20);
+    //    else if (i == bold_end) {
+    //      buffer.textFont(REGULAR, 22);
+    //      bold_start = text.indexOf(searchStr, bold_end);
+    //      bold_end   = (bold_start == -1 ? -1 : bold_start+searchStr.length());
+    //    }
+
+    //    float _w = buffer.textWidth(text.charAt(i));
+    //    if (lineWidth + _w > timelineWidth-110) {
+    //      lineNum++;
+    //      lineWidth = 0;
+    //    }
+    //    buffer.text(text.charAt(i), 85+lineWidth, 45+lineNum*textLeading);
+    //    lineWidth += _w;
+    //  }
+
+    //  tweetHeight = max(int(80 + (lineNum+1) * textLeading), 100);
+
+
+    //  buffer.stroke(LIGHT_GRAY);
+    //  buffer.noFill();
+    //  buffer.beginShape();
+    //  buffer.vertex(timelineWidth-25, 24);
+    //  buffer.vertex(timelineWidth-17, 32);
+    //  buffer.vertex(timelineWidth-9, 24);
+    //  buffer.endShape();
+
+    //  PImage icon = loadImage(_icon_url, "png");
+    //  icon.mask(MASK);
+    //  buffer.image(icon, 15, 15, 60, 60);
+    //  buffer.image(TOOL, 0, tweetHeight-TOOL.height-3);
+
+    //  buffer.endDraw();
+    //  this.img = buffer.get(0, 0, timelineWidth, tweetHeight);
+    //}
   }
 }
 
-@Deprecated
-  String suitRecognizeRegex(String regex) {
-  return "(^" + regex + ")|( " + regex + ")";
+
+String suitRecognizeRegex(String regex) {
+  return "(^" + regex + ")|(\\s" + regex + ")|(\n" + regex + ")";
 }
