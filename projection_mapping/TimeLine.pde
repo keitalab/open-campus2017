@@ -35,7 +35,7 @@ class Timeline {
     TOOL.resize(timelineWidth, int(timelineWidth*TOOL.height/TOOL.width));
     this.searchStr = _searchStr;
 
-    highlight = Pattern.compile("(" + suitRecognizeRegex("@[A-Za-z0-9_]+")
+    highlight = Pattern.compile("(" + suitRecognizeRegex("@[\\w]+")
       + ")|(" + suitRecognizeRegex("(http://|https://){1}[\\w\\.\\-/:\\#\\?\\=\\&\\;\\%\\~\\+]+")
       + ")|(" + suitRecognizeRegex("[#＃][Ａ-Ｚａ-ｚA-Za-z一-鿆0-9０-９ぁ-ヶｦ-ﾟー]+") + ")"
       );
@@ -103,15 +103,8 @@ class Timeline {
   }
 
   void add(Status status) {
-    this.tweet_list.add((new TweetImage(status)).img);
+    this.tweet_list.add(this.getTweetImage(status));
   }
-
-  //@Deprecated
-  //  void add(String _name, String _screen_name, String _text, String _icon_url) {
-  //  this.tweet_list.add(
-  //    (new TweetImage(_name, _screen_name, _text, _icon_url)).img
-  //    );
-  //}
 
 
   void draw() {
@@ -120,11 +113,12 @@ class Timeline {
     rect(0, 0, timelineWidth, timelineHeight);
 
     image(this.tweets_image, 0, 95 + this.top_marginY);
-    
+
     if (this.tweet_list.size() != 0) {
       if (this.top_marginY >= this.tweet_list.get(0).height) {
         tint(255, new_tweet_tint);
         image(this.tweet_list.get(0), 0, 95);
+        image(this.tweets_image, 0, 95 + this.tweet_list.get(0).height);
         tint(255, 255);
         if (this.new_tweet_tint > 255) {
           this.top_marginY = 0;
@@ -137,242 +131,126 @@ class Timeline {
 
 
     image(this.timeline_image, 0, 0);
-    
+
     textFont(BOLD, 18);
     fill(BLACK);
     text(hour()+":"+nf(minute(), 2), timelineWidth/2, 15);
   }
 
   // rewrite this class to method that return PImage
-  @Deprecated
-    class TweetImage {
-    PImage img;
 
-    TweetImage(Status status) {
-      User   user        = status.getUser();
-      String text        = status.getText();
-      String name        = user.getName();
-      String screen_name = user.getScreenName();
-      int tweetHeight;
-      textFont(BOLD, 30);
+  PImage getTweetImage(Status status) {
+    User   user        = status.getUser();
+    String text        = status.getText();
+    String name        = user.getName();
+    String screen_name = "@" + user.getScreenName();
+    int tweetHeight;
+    float textLeading = buffer.textLeading;
 
-      buffer.beginDraw();
+    buffer.beginDraw();
 
-      buffer.stroke(EXTRA_LIGHT_GRAY);
-      buffer.fill(WHITE);
-      buffer.rect(0, 0, buffer.width, buffer.height);
+    buffer.stroke(EXTRA_LIGHT_GRAY);
+    buffer.fill(WHITE);
+    buffer.rect(0, 0, buffer.width, buffer.height);
 
-      buffer.textAlign(LEFT, BOTTOM);
-      buffer.fill(BLACK);
-      buffer.textFont(BOLD, 22);
-      if (textWidth(name) > timelineWidth - 110) {
-        screen_name = "";
-        float len = textWidth("…") + 110;
-        for (int i = 0; i < name.length(); i++) {
-          len += textWidth(name.charAt(i));
+    buffer.textAlign(LEFT, BOTTOM);
+    buffer.fill(BLACK);
+    buffer.textFont(BOLD, 20);
+    if (buffer.textWidth(name) > timelineWidth - 110) {
+      screen_name = "";
+      float len = buffer.textWidth("…") + 110;
+      for (int i = 0; i < name.length(); i++) {
+        len += buffer.textWidth(name.charAt(i));
+        if (len > timelineWidth) {
+          name = name.substring(0, i) + "…";
+          break;
+        }
+      }
+    } else {
+      buffer.textFont(REGULAR, 22);
+      if (buffer.textWidth(name) + buffer.textWidth(screen_name) > timelineWidth - 110) {
+        float len = buffer.textWidth(name) + buffer.textWidth("…") + 110;
+        for (int i = 0; i < screen_name.length(); i++) {
+          len += buffer.textWidth(screen_name.charAt(i));
           if (len > timelineWidth) {
-            name = name.substring(0, i) + "…";
+            screen_name = screen_name.substring(0, i) + "…";
             break;
           }
         }
-      } else {
-        if (textWidth(name) + textWidth(screen_name) > timelineWidth - 110) {
-          float len = textWidth(name) + textWidth("…") + 110;
-          for (int i = 0; i < screen_name.length(); i++) {
-            len += textWidth(screen_name.charAt(i));
-            if (len > timelineWidth) {
-              screen_name = screen_name.substring(0, i) + "…";
-              break;
-            }
-          }
+      }
+    }
+    buffer.textFont(BOLD, 20);
+    buffer.text(name, 85, 40);
+    float nameWidth = buffer.textWidth(name);
+    buffer.fill(DARK_GRAY);
+    buffer.textFont(REGULAR);
+    buffer.text(screen_name, 95+nameWidth, 40);
+
+    buffer.textAlign(LEFT, TOP);
+    buffer.fill(BLACK);
+    buffer.textFont(REGULAR);
+    int lineNum = 0;
+    float lineWidth = 0;
+    Matcher matcher = highlight.matcher(text);
+    int highlight_start = -1;
+    int highlight_end   = -1;
+    int bold_start      = text.indexOf(searchStr);
+    int bold_end        = text.indexOf(searchStr) + searchStr.length();
+    if (matcher.find()) {
+      highlight_start = matcher.start();
+      highlight_end   = matcher.end();
+    }
+    for (int i = 0; i < text.length(); i++) {
+      if (i == highlight_start) buffer.fill(BLUE);
+      else if (i == highlight_end) {
+        buffer.fill(BLACK);
+        if (matcher.find()) {
+          highlight_start = text.charAt(highlight_end) == ' ' ? matcher.start()+1 : matcher.start();
+          highlight_end   = matcher.end();
+        } else {
+          highlight_start = -1;
+          highlight_end   = -1;
         }
       }
-      buffer.text(name, 85, 40);
-      float nameWidth = textWidth(name);
-      buffer.fill(DARK_GRAY);
-      buffer.textFont(REGULAR, 22);
-      buffer.text(screen_name, 95+nameWidth, 40);
-
-      buffer.textAlign(LEFT, TOP);
-      buffer.fill(BLACK);
-      buffer.textFont(REGULAR, 22);
-      int lineNum = 0;
-      float textLeading = buffer.textLeading;
-      float lineWidth = 0;
-      Matcher matcher = highlight.matcher(text);
-      int highlight_start = -1;
-      int highlight_end   = -1;
-      int bold_start      = text.indexOf(searchStr);
-      int bold_end        = text.indexOf(searchStr) + searchStr.length();
-      if (matcher.find()) {
-        highlight_start = matcher.start();
-        highlight_end   = matcher.end();
+      if (i == bold_start) buffer.textFont(BOLD, 20);
+      else if (i == bold_end) {
+        buffer.textFont(REGULAR);
+        bold_start = text.indexOf(searchStr, bold_end);
+        bold_end   = (bold_start == -1 ? -1 : bold_start+searchStr.length());
       }
-      for (int i = 0; i < text.length(); i++) {
-        if (i == highlight_start) buffer.fill(BLUE);
-        else if (i == highlight_end) {
-          buffer.fill(BLACK);
-          if (matcher.find()) {
-            highlight_start = matcher.start();
-            highlight_end   = matcher.end();
-          } else {
-            highlight_start = -1;
-            highlight_end   = -1;
-          }
-        }
-        if (i == bold_start) buffer.textFont(BOLD, 20);
-        else if (i == bold_end) {
-          buffer.textFont(REGULAR, 22);
-          bold_start = text.indexOf(searchStr, bold_end);
-          bold_end   = (bold_start == -1 ? -1 : bold_start+searchStr.length());
-        }
-        if (text.charAt(i) == '\n') {
-          lineNum++;
-          lineWidth = 0;
-          continue;
-        }
-        float _w = buffer.textWidth(text.charAt(i));
-        if (lineWidth + _w > timelineWidth-110) {
-          lineNum++;
-          lineWidth = 0;
-        }
-        buffer.text(text.charAt(i), 85+lineWidth, 45+lineNum*textLeading);
-        lineWidth += _w;
+      if (text.charAt(i) == '\n') {
+        lineNum++;
+        lineWidth = 0;
+        continue;
       }
-
-      tweetHeight = max(int(80 + (lineNum+1) * textLeading), 100);
-
-      buffer.stroke(LIGHT_GRAY);
-      buffer.noFill();
-      buffer.beginShape();
-      buffer.vertex(timelineWidth-25, 24);
-      buffer.vertex(timelineWidth-17, 32);
-      buffer.vertex(timelineWidth-9, 24);
-      buffer.endShape();
-
-      PImage icon = loadImage(user.getProfileImageURLHttps(), "png");
-      icon.mask(MASK);
-      buffer.image(icon, 15, 15, 60, 60);
-      buffer.image(TOOL, 0, tweetHeight-TOOL.height-3);
-
-      buffer.endDraw();
-      this.img = buffer.get(0, 0, timelineWidth, tweetHeight);
+      float _w = buffer.textWidth(text.charAt(i));
+      if (lineWidth + _w > timelineWidth-110) {
+        lineNum++;
+        lineWidth = 0;
+      }
+      buffer.text(text.charAt(i), 85+lineWidth, 45+lineNum*textLeading);
+      lineWidth += _w;
     }
 
-    // only use for test
-    //@Deprecated
-    //  TweetImage(String _name, String _screen_name, String _text, String _icon_url) {
-    //  String text = _text;
-    //  int tweetHeight;
-    //  textFont(BOLD, 30);
+    tweetHeight = max(int(80 + (lineNum+1) * textLeading), 100);
 
-    //  buffer.beginDraw();
+    buffer.stroke(LIGHT_GRAY);
+    buffer.noFill();
+    buffer.beginShape();
+    buffer.vertex(timelineWidth-25, 24);
+    buffer.vertex(timelineWidth-17, 32);
+    buffer.vertex(timelineWidth-9, 24);
+    buffer.endShape();
 
-    //  buffer.stroke(EXTRA_LIGHT_GRAY);
-    //  buffer.fill(WHITE);
-    //  buffer.rect(0, 0, buffer.width, buffer.height);
+    PImage icon = loadImage(user.getProfileImageURLHttps(), "png");
+    icon.mask(MASK);
+    buffer.image(icon, 15, 15, 60, 60);
+    buffer.image(TOOL, 0, tweetHeight-TOOL.height-3);
 
-    //  buffer.textAlign(LEFT, BOTTOM);
-    //  buffer.fill(BLACK);
-    //  buffer.textFont(BOLD, 22);
-    //  String name        = _name;
-    //  String screen_name = _screen_name;
-    //  if (textWidth(name) > timelineWidth - 110) {
-    //    screen_name = "";
-    //    float len = textWidth("…") + 110;
-    //    for (int i = 0; i < name.length(); i++) {
-    //      len += textWidth(name.charAt(i));
-    //      if (len > timelineWidth) {
-    //        name = name.substring(0, i) + "…";
-    //        break;
-    //      }
-    //    }
-    //  } else {
-    //    if (textWidth(name) + textWidth(screen_name) > timelineWidth - 110) {
-    //      float len = textWidth(name) + textWidth("…") + 110;
-    //      for (int i = 0; i < screen_name.length(); i++) {
-    //        len += textWidth(screen_name.charAt(i));
-    //        if (len > timelineWidth) {
-    //          screen_name = screen_name.substring(0, i) + "…";
-    //          break;
-    //        }
-    //      }
-    //    }
-    //  }
-    //  buffer.text(name, 85, 40);
-    //  float nameWidth = textWidth(name);
-    //  buffer.fill(DARK_GRAY);
-    //  buffer.textFont(REGULAR, 22);
-    //  buffer.text(screen_name, 95+nameWidth, 40);
-
-
-
-
-    //  buffer.textAlign(LEFT, TOP);
-    //  buffer.fill(BLACK);
-    //  buffer.textFont(REGULAR, 22);
-
-    //  int lineNum = 0;
-    //  float textLeading = buffer.textLeading;
-    //  float lineWidth = 0;
-
-    //  Matcher matcher = highlight.matcher(text);
-    //  matcher.find();
-    //  int highlight_start = matcher.start();
-    //  int highlight_end   = matcher.end();
-    //  int bold_start      = text.indexOf(searchStr);
-    //  int bold_end        = text.indexOf(searchStr) + searchStr.length();
-    //  for (int i = 0; i < text.length(); i++) {
-    //    if (i == highlight_start) buffer.fill(BLUE);
-    //    else if (i == highlight_end) {
-    //      buffer.fill(BLACK);
-    //      if (matcher.find()) {
-    //        highlight_start = matcher.start();
-    //        highlight_end   = matcher.end();
-    //      } else {
-    //        highlight_start = -1;
-    //        highlight_end   = -1;
-    //      }
-    //    }
-
-    //    if (i == bold_start) buffer.textFont(BOLD, 20);
-    //    else if (i == bold_end) {
-    //      buffer.textFont(REGULAR, 22);
-    //      bold_start = text.indexOf(searchStr, bold_end);
-    //      bold_end   = (bold_start == -1 ? -1 : bold_start+searchStr.length());
-    //    }
-
-    //    float _w = buffer.textWidth(text.charAt(i));
-    //    if (lineWidth + _w > timelineWidth-110) {
-    //      lineNum++;
-    //      lineWidth = 0;
-    //    }
-    //    buffer.text(text.charAt(i), 85+lineWidth, 45+lineNum*textLeading);
-    //    lineWidth += _w;
-    //  }
-
-    //  tweetHeight = max(int(80 + (lineNum+1) * textLeading), 100);
-
-
-    //  buffer.stroke(LIGHT_GRAY);
-    //  buffer.noFill();
-    //  buffer.beginShape();
-    //  buffer.vertex(timelineWidth-25, 24);
-    //  buffer.vertex(timelineWidth-17, 32);
-    //  buffer.vertex(timelineWidth-9, 24);
-    //  buffer.endShape();
-
-    //  PImage icon = loadImage(_icon_url, "png");
-    //  icon.mask(MASK);
-    //  buffer.image(icon, 15, 15, 60, 60);
-    //  buffer.image(TOOL, 0, tweetHeight-TOOL.height-3);
-
-    //  buffer.endDraw();
-    //  this.img = buffer.get(0, 0, timelineWidth, tweetHeight);
-    //}
+    buffer.endDraw();
+    return buffer.get(0, 0, timelineWidth, tweetHeight);
   }
 }
-
 
 String suitRecognizeRegex(String regex) {
   return "(^" + regex + ")|(\\s" + regex + ")|(\n" + regex + ")";
