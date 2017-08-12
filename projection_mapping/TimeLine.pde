@@ -1,13 +1,18 @@
-class Timeline {
+class Timeline {  
   LinkedList<PImage> tweet_list;
   PImage timeline_image;
+  String searchStr;
+
+  PGraphics buffer;
 
   int timelineWidth  = int(height*.5625);
   int timelineHeight = height;
 
+  Pattern highlight;
+
   final int ICON_SIZE = 64;
 
-  final PFont BOLD    = createFont("Ricty BOLD", 30, true);
+  final PFont BOLD    = createFont("Ricty BOLD", 22, true);
   final PFont REGULAR = createFont("Ricty", 22, true);
 
   final PImage MASK = loadImage("mask.png");
@@ -24,6 +29,12 @@ class Timeline {
   Timeline(String _searchStr) {
     tweet_list     = new LinkedList<PImage>();
     TOOL.resize(timelineWidth, int(timelineWidth*TOOL.height/TOOL.width));
+    this.searchStr = _searchStr;
+
+    highlight = Pattern.compile("(" + suitRecognizeRegex("@[A-Za-z0-9_]+")
+      + ")|(" + suitRecognizeRegex("(http://|https://){1}[\\w\\.\\-/:\\#\\?\\=\\&\\;\\%\\~\\+]+")
+      + ")|(" + suitRecognizeRegex("[#＃][Ａ-Ｚａ-ｚA-Za-z一-鿆0-9０-９ぁ-ヶｦ-ﾟー]+") + ")"
+      );
 
     float glass_posX = timelineWidth/2-textWidth(_searchStr)/2-25;
     buffer = createGraphics(timelineWidth, timelineHeight);
@@ -31,39 +42,38 @@ class Timeline {
     buffer.textAlign(LEFT, TOP);
     buffer.fill(WHITE);
     buffer.stroke(WHITE);
-    buffer.rect(0, 0, timelineWidth, 65);
+    buffer.rect(0, 30, timelineWidth, 40);
     buffer.fill(EXTRA_LIGHT_GRAY);
-    buffer.rect(50, 25, timelineWidth-100, 30, 100);
+    buffer.rect(50, 30, timelineWidth-100, 30, 100);
 
     buffer.textFont(REGULAR, 24);
     buffer.fill(BLACK);
     buffer.textAlign(CENTER, CENTER);
-    buffer.text(_searchStr, timelineWidth/2, 40);
+    buffer.text(_searchStr, timelineWidth/2, 45);
     buffer.textAlign(LEFT, TOP);
 
     buffer.strokeWeight(2);
     buffer.stroke(DARK_GRAY);
     buffer.fill(EXTRA_LIGHT_GRAY);
-    buffer.line(glass_posX, 40, glass_posX+9, 49);
-    buffer.ellipse(glass_posX, 40, 16, 16);
+    buffer.line(glass_posX, 45, glass_posX+9, 54);
+    buffer.ellipse(glass_posX, 45, 16, 16);
 
     buffer.stroke(BLUE);
     buffer.noFill();
     buffer.beginShape();
-    buffer.vertex(28, 30);
-    buffer.vertex(20, 40);
-    buffer.vertex(28, 50);
+    buffer.vertex(28, 35);
+    buffer.vertex(20, 45);
+    buffer.vertex(28, 55);
     buffer.endShape();
     buffer.strokeWeight(1);
-  
-    buffer.image(loadImage("status.png"), 0, 0, timelineWidth, 25);
-    buffer.image(loadImage("category.png"), 0, 65, timelineWidth, 30);
+
+    buffer.image(loadImage("status.png"), 0, 0, timelineWidth, 30);
+    buffer.image(loadImage("category.png"), 0, 70, timelineWidth, 30);
     PImage menu = loadImage("menu.png");
     float menuHeight = timelineWidth*menu.height/menu.width;
     buffer.stroke(EXTRA_LIGHT_GRAY);
     buffer.rect(0, timelineHeight-menuHeight-1, timelineWidth, menuHeight);
     buffer.image(menu, 0, timelineHeight-menuHeight, timelineWidth, menuHeight);
-    
 
     buffer.endDraw();
     this.timeline_image = buffer.get();
@@ -110,6 +120,9 @@ class Timeline {
     rect(0, 0, timelineWidth, timelineHeight);
     image(this.tweet_list.get(0), 0, 95);
     image(this.timeline_image, 0, 0);
+    textFont(BOLD, 18);
+    fill(BLACK);
+    text(hour()+":"+minute(), timelineWidth/2, 15);
   }
 
   class TweetImage {
@@ -157,56 +170,114 @@ class Timeline {
       int tweetHeight;
       textFont(BOLD, 30);
 
-      int lineNum = 1;
-      float lineWidth = 0;
-      for (int i = 0; i < text.length(); i++) {
-        float _w = textWidth(text.charAt(i));
-        if (lineWidth + _w > timelineWidth) {
-          lineNum++;
-          lineWidth = _w;
-        } else {
-          lineWidth += _w;
-        }
-      }
-      tweetHeight = max(int(70+lineNum*g.textLeading), 110);
-
       buffer.beginDraw();
 
       buffer.stroke(EXTRA_LIGHT_GRAY);
       buffer.fill(WHITE);
       buffer.rect(0, 0, buffer.width, buffer.height);
 
-      buffer.image(TOOL, 0, tweetHeight-TOOL.height-5);   
-
-      PImage icon = loadImage(_icon_url, "png");
-      println(icon.width, icon.height);
-      icon.mask(MASK);
-      buffer.image(icon, 15, 15, 60, 60);
-
       buffer.textAlign(LEFT, BOTTOM);
       buffer.fill(BLACK);
       buffer.textFont(BOLD, 22);
-      buffer.text(_name, 85, 40);
-      float nameWidth = textWidth(_name);
+      String name        = _name;
+      String screen_name = _screen_name;
+      if (textWidth(name) > timelineWidth - 110) {
+        screen_name = "";
+        float len = textWidth("…") + 110;
+        for (int i = 0; i < name.length(); i++) {
+          len += textWidth(name.charAt(i));
+          if (len > timelineWidth) {
+            name = name.substring(0, i) + "…";
+            break;
+          }
+        }
+      } else {
+        if (textWidth(name) + textWidth(screen_name) > timelineWidth - 110) {
+          float len = textWidth(name) + textWidth("…") + 110;
+          for (int i = 0; i < screen_name.length(); i++) {
+            len += textWidth(screen_name.charAt(i));
+            if (len > timelineWidth) {
+              screen_name = screen_name.substring(0, i) + "…";
+              break;
+            }
+          }
+        }
+      }
+      buffer.text(name, 85, 40);
+      float nameWidth = textWidth(name);
       buffer.fill(DARK_GRAY);
       buffer.textFont(REGULAR, 22);
-      buffer.text(_screen_name, 95+nameWidth, 40);
+      buffer.text(screen_name, 95+nameWidth, 40);
+
+
+
 
       buffer.textAlign(LEFT, TOP);
       buffer.fill(BLACK);
-      buffer.textFont(REGULAR, 24);
-      buffer.text(text, 95, 45);
+      buffer.textFont(REGULAR, 22);
+
+      int lineNum = 0;
+      float textLeading = buffer.textLeading;
+      float lineWidth = 0;
+
+      Matcher matcher = highlight.matcher(text);
+      matcher.find();
+      int highlight_start = matcher.start();
+      int highlight_end   = matcher.end();
+      int bold_start      = text.indexOf(searchStr);
+      int bold_end        = text.indexOf(searchStr) + searchStr.length();
+      for (int i = 0; i < text.length(); i++) {
+        if (i == highlight_start) buffer.fill(BLUE);
+        else if (i == highlight_end) {
+          buffer.fill(BLACK);
+          if (matcher.find()) {
+            highlight_start = matcher.start();
+            highlight_end   = matcher.end();
+          } else {
+            highlight_start = -1;
+            highlight_end   = -1;
+          }
+        }
+
+        if (i == bold_start) buffer.textFont(BOLD, 20);
+        else if (i == bold_end) {
+          buffer.textFont(REGULAR, 22);
+          bold_start = text.indexOf(searchStr, bold_end);
+          bold_end   = (bold_start == -1 ? -1 : bold_start+searchStr.length());
+        }
+
+        float _w = buffer.textWidth(text.charAt(i));
+        if (lineWidth + _w > timelineWidth-110) {
+          lineNum++;
+          lineWidth = 0;
+        }
+        buffer.text(text.charAt(i), 85+lineWidth, 45+lineNum*textLeading);
+        lineWidth += _w;
+      }
+
+      tweetHeight = max(int(80 + (lineNum+1) * textLeading), 100);
+
 
       buffer.stroke(LIGHT_GRAY);
       buffer.noFill();
       buffer.beginShape();
-      buffer.vertex(timelineWidth-26, 24);
-      buffer.vertex(timelineWidth-18, 32);
-      buffer.vertex(timelineWidth-10, 24);
+      buffer.vertex(timelineWidth-25, 24);
+      buffer.vertex(timelineWidth-17, 32);
+      buffer.vertex(timelineWidth-9, 24);
       buffer.endShape();
+
+      PImage icon = loadImage(_icon_url, "png");
+      icon.mask(MASK);
+      buffer.image(icon, 15, 15, 60, 60);
+      buffer.image(TOOL, 0, tweetHeight-TOOL.height-3);
 
       buffer.endDraw();
       this.img = buffer.get(0, 0, timelineWidth, tweetHeight);
     }
   }
+}
+
+@Deprecated
+  String suitRecognizeRegex(String regex) {
+  return "(^" + regex + ")|( " + regex + ")";
 }
