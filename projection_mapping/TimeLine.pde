@@ -40,7 +40,6 @@ class Timeline {
       + ")|(" + suitRecognizeRegex("[#＃][Ａ-Ｚａ-ｚA-Za-z一-鿆0-9０-９ぁ-ヶｦ-ﾟー]+") + ")"
       );
 
-    float glass_posX = timelineWidth/2-textWidth(_searchStr)/2-25;
     buffer = createGraphics(timelineWidth, timelineHeight);
     buffer.beginDraw();
     buffer.textAlign(LEFT, TOP);
@@ -53,6 +52,7 @@ class Timeline {
     buffer.textFont(REGULAR, 24);
     buffer.fill(BLACK);
     buffer.textAlign(CENTER, CENTER);
+    float glass_posX = timelineWidth/2-buffer.textWidth(_searchStr)/2-20;
     buffer.text(_searchStr, timelineWidth/2, 45);
     buffer.textAlign(LEFT, TOP);
 
