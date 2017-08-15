@@ -89,7 +89,8 @@ class Timeline {
     // Streaming API setup
     FilterListener listener = new FilterListener();
     // build Configuration and TwitterStream by app keys.
-    Configuration configuration = new ConfigurationBuilder().setOAuthConsumerKey(CONSUMER_KEY)
+    Configuration configuration = new ConfigurationBuilder()
+      .setOAuthConsumerKey(CONSUMER_KEY)
       .setOAuthConsumerSecret(CONSUMER_SECRET)
       .setOAuthAccessToken(ACCESS_TOKEN)
       .setOAuthAccessTokenSecret(ACCESS_SECRET)

@@ -13,7 +13,7 @@ void settings() {
 
 void setup() {
   timeline = new Timeline("草");
-  timer    = new Timer(this);
+  timer    = new Timer("keitalab-oc.local");
   textAlign(CENTER, CENTER);
 }
 
@@ -21,4 +21,9 @@ void draw() {
   background(0);
   timeline.draw();
   timer.draw(millis());
+}
+
+void exit() {
+  timer.exit();
+  super.exit();
 }

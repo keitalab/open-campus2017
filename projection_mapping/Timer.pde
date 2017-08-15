@@ -1,17 +1,25 @@
 class Timer {
+  final int SPEED = 800;
+
   int beforeMilliSeconds;
   int remainMilliSeconds;
-  Sender sender;
+  String address;
+  PostRequest post;
+
 
   final int ADD_MILLIS_PER_TWEET = 20000;
 
-  Timer(PApplet pApplet) {
-    this.sender = new Sender(pApplet, 5000, 6000);
+  Timer(String addr) {
+    this.address = addr;
   }
 
   void add(int currentMilliSeconds) {
     if (this.remainMilliSeconds == 0) {
-      this.sender.send("ON");
+      this.post = new PostRequest("http://" + this.address + "/api/rotate/forever");
+      this.post.addHeader("Content-Type", "application/x-www-form-urlencoded");
+      this.post.addData("speed", Integer.toString(SPEED));
+      this.post.send();
+      println("ON : " + this.post.getContent());
       this.beforeMilliSeconds = currentMilliSeconds;
     }
     this.remainMilliSeconds += ADD_MILLIS_PER_TWEET;
@@ -20,7 +28,11 @@ class Timer {
   void consume(int currentMilliSeconds) {
     if (this.remainMilliSeconds == 0) return;
     else if (this.remainMilliSeconds < 0) {
-      this.sender.send("OFF");
+      this.post = new PostRequest("http://" + this.address + "/api/stop");
+      this.post.addHeader("Content-Type", "application/x-www-form-urlencoded");
+      this.post.addData("smooth", Boolean.toString(true));
+      this.post.send();
+      println("OFF : " + this.post.getContent());
       this.remainMilliSeconds = 0;
     } else {
       this.remainMilliSeconds -= currentMilliSeconds - this.beforeMilliSeconds;
@@ -30,25 +42,14 @@ class Timer {
 
   void draw(int currentMilliSeconds) {
     this.consume(currentMilliSeconds);
-    if (frameCount % 100 == 0) {
-      println(nf(this.remainMilliSeconds / 60000, 2) + "m "
-        + nf((this.remainMilliSeconds % 60000) / 1000, 2) + "s");
-    }
-    //println(this.remainMilliSeconds);
+    drawStopWatch(this.remainMilliSeconds/1000, int(width*0.1-height*0.05625), int(width*0.5+height*0.28125), height/2);
   }
 
-  @Deprecated
-    class Sender {
-    NetAddress myRemoteLocation;
-    OscP5 oscP5;
-
-    Sender(PApplet pApplet, int recievePort, int sendPort) {
-      myRemoteLocation = new NetAddress("127.0.0.1", recievePort);
-      oscP5            = new OscP5(pApplet, sendPort);
-    }
-
-    void send(String message) {
-      oscP5.send(new OscMessage(message), myRemoteLocation);
-    }
+  void exit() {
+    this.post = new PostRequest("http://" + this.address + "/api/stop");
+    this.post.addHeader("Content-Type", "application/x-www-form-urlencoded");
+    this.post.addData("smooth", Boolean.toString(true));
+    this.post.send();
+    println("OFF : " + this.post.getContent());
   }
 }
