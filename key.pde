@@ -1,0 +1,4 @@
+final String CONSUMER_KEY    = "huD21bXFt4AND42ZmWjjIMC1d";
+final String CONSUMER_SECRET = "0k3og0aSUZZLgpffxGWUJMGMTePcDJAMIbo26S8Bn2GCXudhin";
+final String ACCESS_TOKEN    = "705027459805114368-mBeXJZo7ljUtL0M266PNQgcmcVGkCMD";
+final String ACCESS_SECRET   = "P7s7Qt2idyUzY49IfPSKjdHqxGPZium1m8htaBv0iWWlh";
