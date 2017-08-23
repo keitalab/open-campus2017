@@ -1,38 +1,36 @@
 class Timer {
-  final int SPEED = 800;
-
   int beforeMilliSeconds;
   int remainMilliSeconds;
-  String address;
-  PostRequest post;
 
+  Webmo webmo;
 
-  final int ADD_MILLIS_PER_TWEET = 20000;
+  private int webmoDegree;
 
   Timer(String addr) {
-    this.address = addr;
+    this.webmo = new Webmo(addr);
+    this.remainMilliSeconds = FIRST_MILLISECONDS;
+    if (this.remainMilliSeconds != 0) {
+      webmo.rotate(SPEED);
+      println("ON");
+      this.beforeMilliSeconds = millis();
+    }
   }
 
-  void add(int currentMilliSeconds) {
+  void add(int textLength, int currentMilliSeconds) {
     if (this.remainMilliSeconds == 0) {
-      this.post = new PostRequest("http://" + this.address + "/api/rotate/forever");
-      this.post.addHeader("Content-Type", "application/x-www-form-urlencoded");
-      this.post.addData("speed", Integer.toString(SPEED));
-      this.post.send();
-      println("ON : " + this.post.getContent());
+      webmo.rotate(SPEED);
+      println("ON");
       this.beforeMilliSeconds = currentMilliSeconds;
     }
-    this.remainMilliSeconds += ADD_MILLIS_PER_TWEET;
+    this.remainMilliSeconds += additionalTime(textLength);
   }
 
   void consume(int currentMilliSeconds) {
-    if (this.remainMilliSeconds == 0) return;
-    else if (this.remainMilliSeconds < 0) {
-      this.post = new PostRequest("http://" + this.address + "/api/stop");
-      this.post.addHeader("Content-Type", "application/x-www-form-urlencoded");
-      this.post.addData("smooth", Boolean.toString(true));
-      this.post.send();
-      println("OFF : " + this.post.getContent());
+    if (this.remainMilliSeconds == 0) {
+      if (frameCount % 500 == 0 && webmoDegree - webmo.rotation() < 5) webmo.stop(false);
+    } else if (this.remainMilliSeconds < 0) {
+      webmo.stop(false);
+      println("OFF");
       this.remainMilliSeconds = 0;
     } else {
       this.remainMilliSeconds -= currentMilliSeconds - this.beforeMilliSeconds;
@@ -41,15 +39,13 @@ class Timer {
   }
 
   void draw(int currentMilliSeconds) {
-    this.consume(currentMilliSeconds);
     drawStopWatch(this.remainMilliSeconds/1000, int(width*0.1-height*0.05625), int(width*0.5+height*0.28125), height/2);
+    this.consume(currentMilliSeconds);
+    if (frameCount % 500 == 0) webmoDegree = webmo.rotation();
   }
 
   void exit() {
-    this.post = new PostRequest("http://" + this.address + "/api/stop");
-    this.post.addHeader("Content-Type", "application/x-www-form-urlencoded");
-    this.post.addData("smooth", Boolean.toString(true));
-    this.post.send();
-    println("OFF : " + this.post.getContent());
+    webmo.stop(false);
+    println("OFF");
   }
 }

@@ -2,7 +2,7 @@ class FilterListener implements StatusListener {
   @Override
     public void onStatus(Status status) {
     timeline.add(status);
-    timer.add(millis());
+    timer.add(status.getText().length(), millis());
   }
 
   @Override

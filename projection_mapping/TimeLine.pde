@@ -30,10 +30,10 @@ class Timeline {
   static final color EXTRA_EXTRA_LIGHT_GRAY = #F5F8FA;
   static final color WHITE                  = #FFFFFF;
 
-  Timeline(String _searchStr) {
+  Timeline(String[] _searchStr) {
     tweet_list     = new LinkedList<PImage>();
     TOOL.resize(timelineWidth, int(timelineWidth*TOOL.height/TOOL.width));
-    this.searchStr = _searchStr;
+    this.searchStr = _searchStr[0];
 
     highlight = Pattern.compile("(" + suitRecognizeRegex("@[\\w]+")
       + ")|(" + suitRecognizeRegex("(http://|https://){1}[\\w\\.\\-/:\\#\\?\\=\\&\\;\\%\\~\\+]+")
@@ -52,8 +52,8 @@ class Timeline {
     buffer.textFont(REGULAR, 24);
     buffer.fill(BLACK);
     buffer.textAlign(CENTER, CENTER);
-    float glass_posX = timelineWidth/2-buffer.textWidth(_searchStr)/2-20;
-    buffer.text(_searchStr, timelineWidth/2, 45);
+    float glass_posX = timelineWidth/2-buffer.textWidth(this.searchStr)/2-20;
+    buffer.text(this.searchStr, timelineWidth/2, 45);
     buffer.textAlign(LEFT, TOP);
 
     buffer.strokeWeight(2);
@@ -130,15 +130,12 @@ class Timeline {
       } else this.top_marginY += 8;
     }
 
-
     image(this.timeline_image, 0, 0);
 
     textFont(BOLD, 18);
     fill(BLACK);
     text(hour()+":"+nf(minute(), 2), timelineWidth/2, 15);
   }
-
-  // rewrite this class to method that return PImage
 
   PImage getTweetImage(Status status) {
     User   user        = status.getUser();
@@ -245,8 +242,8 @@ class Timeline {
 
     PImage icon = loadImage(user.getProfileImageURLHttps(), "png");
     icon.mask(MASK);
-    buffer.image(icon, 15, 15, 60, 60);
     buffer.image(TOOL, 0, tweetHeight-TOOL.height-3);
+    buffer.image(icon, 15, 15, 60, 60);
 
     buffer.endDraw();
     return buffer.get(0, 0, timelineWidth, tweetHeight);
